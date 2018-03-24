@@ -3,10 +3,33 @@ import random
 import time
 
 import pyautogui
+from PIL import Image
 
-def take_screenshot():
-    sct = mss()
-    sct.shot()
+# TILES = {
+            # None: Image.open('images/unclicked.png'),
+            # 0: Image.open('images/zero.png'),
+            # 1: Image.open('images/one.png'),
+            # 2: Image.open('images/two.png'),
+            # 3: Image.open('images/three.png'),
+            # 4: Image.open('images/four.png'),
+            # 5: Image.open('images/five.png'),
+            # 6: Image.open('images/six.png'),
+            # 7: Image.open('images/seven.png'),
+            # 8: Image.open('images/eight.png')
+        # }
+TILES = {
+            None: 'images/unclicked.png',
+            0: 'images/zero.png',
+            1: 'images/one.png',
+            2: 'images/two.png',
+            3: 'images/three.png',
+            4: 'images/four.png',
+            5: 'images/five.png',
+            6: 'images/six.png',
+            7: 'images/seven.png',
+            8: 'images/eight.png'
+        }
+
 
 def restart():
     pyautogui.press('f2')
@@ -14,63 +37,89 @@ def restart():
 def game_on():
     return bool(pyautogui.locateCenterOnScreen('images/smiley.png'))
 
-def random_unclicked():
-    unclicked = list(pyautogui.locateAllOnScreen('images/unclicked.png'))
-    tile = random.choice(unclicked)
-    pyautogui.moveTo(tile[0]+tile[2]/2 , tile[1]+tile[3]/2)
-    pyautogui.click()
+def left(i, width, height):
+    if i % width != 0:
+        # Not in col 1
+        return i-1
 
-def rando():
-    restart = pyautogui.locateCenterOnScreen('images/smiley.png')
-    if restart:
-        x,y = restart
-    while True:
-        while game_on():
-            random_unclicked()
-        pyautogui.moveTo(x, y, 1)
-        pyautogui.click()
+def right(i, width, height):
+    if (i+1) % width != 0:
+        # Not in last col
+        return i+1
+
+def above(i, width, height):
+    if i-width >= 0:
+        # not top row
+        return i-width
+
+def below(i, width, height):
+    if i+width < width*height:
+        # not bottom row
+        return i+width
+
+def top_left(i, width, height):
+    top = above(i, width, height)
+    if top:
+        return left(top, width, height)
+
+def top_right(i, width, height):
+    top = above(i, width, height)
+    if top:
+        return right(top, width, height)
+
+def bottom_left(i, width, height):
+    bottom = below(i, width, height)
+    if bottom:
+        return left(bottom, width, height)
+
+def bottom_right(i, width, height):
+    bottom = below(i, width, height)
+    if bottom:
+        return right(bottom, width, height)
+
+def get_neighbours(i, width, height):
+    functions = [top_left, above, top_right, right, bottom_right, below, bottom_left, left]
+    neighbours = [f(i, width, height) for f in functions]
+    return [n for n in neighbours if n is not None]
 
 def get_board():
-    board = list(pyautogui.locateAllOnScreen('images/unclicked.png'))
-    board = sorted(board, key=lambda x: (x[1], x[0]))
-    height = sum(1 for i in board if i[0]==board[0][0])
-    width = sum(1 for i in board if i[1]==board[0][1])
-    board = [[b, 'n'] for b in board]
-    grid = [board[i:i+width] for i in range(0, len(board), width)]
-    return grid
+    tiles = list(pyautogui.locateAllOnScreen(TILES[None]))
+    tiles = sorted(tiles, key=lambda x: (x[1], x[0]))
+    height = sum(1 for i in tiles if i[0]==tiles[0][0])
+    width = sum(1 for i in tiles if i[1]==tiles[0][1])
+    board = {i: {'location': tile, 'neighbours': get_neighbours(i, width, height), 'value': None} for i, tile in enumerate(tiles)}
+    return board
+
+def read_tile_value(tile):
+    im = pyautogui.screenshot(region=tile['location'])
+    for value in TILES:
+        if pyautogui.locate(TILES[value], im):
+            tile['value'] = value
+            break
 
 def read_full_board(board):
-    new = []
-    for row in board:
-        new_row = []
-        for tile in row:
-            if tile[1] not in ['?', 'n']:
-                new_row.append(tile)
-                continue
-            im = pyautogui.screenshot(region=tile[0])
-            if pyautogui.locate('images/unclicked.png', im):
-                new_row.append([tile[0], 'n'])
-            elif pyautogui.locate('images/zero.png', im):
-                new_row.append([tile[0], ' '])
-            elif pyautogui.locate('images/one.png', im):
-                new_row.append([tile[0], '1'])
-            elif pyautogui.locate('images/two.png', im):
-                new_row.append([tile[0], '2'])
-            else:
-                new_row.append([tile[0], '?'])
-        new.append(new_row)
-    return new
+    for tile in board:
+        print(tile)
+        if board[tile]['value'] is not None:
+            # Tile has already been read before
+            continue
+        read_tile_value(board[tile])
+    return board
 
-def print_board(board):
-    os.system('clear')
-    for row in board:
-        for tile in row:
-            print(tile[1], end = ' ')
-        print()
+def click_tile_and_read(tile, board):
+    x, y, w, h = tile['location']
+    pyautogui.moveTo(x+w/2, y+h/2)
+    pyautogui.click()
+
 
 if __name__ == '__main__':
     board = get_board()
+    print('got_board')
     while True:
         board = read_full_board(board)
-        print_board(board)
+        print('full')
+        print(board[0])
+    # board = click_tile_and_read(board)
+    # print(board)
+
 
