@@ -3,7 +3,6 @@ import random
 import time
 
 import pyautogui
-import pyscreenshot
 from PIL import Image
 
 # TILES = {
