@@ -129,19 +129,18 @@ def evaluate(tile_index, board):
     mines = len([t for t in tile['neighbours'] if board[t]['value'] == 'mine'])
     if value == mines:
        for t in unclicked:
-           print(f'from {tile_index}({tile["value"]}): click {t}')
-           # input()
            board = click_tile_and_read(t, board)
-    try:
-        if value-mines == len(unclicked):
-           for t in unclicked:
-               print(f'from {tile_index}({tile["value"]}): mine {t}')
-               # input()
-               board[t]['value'] = 'mine'
-        return board
-    except:
-        print(tile)
-        raise(RuntimeError)
+    if value-mines == len(unclicked):
+       for t in unclicked:
+           flag_tile(t, board)
+           board[t]['value'] = 'mine'
+    return board
+
+def flag_tile(tile_index, board):
+    tile = board[tile_index]
+    x, y, w, h = tile['location']
+    pyautogui.moveTo(x+w/2, y+h/2)
+    pyautogui.press('space')
 
 def print_board(board):
     tiles = [board[t]['location'] for t in board]
