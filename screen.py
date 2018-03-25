@@ -3,6 +3,7 @@ import random
 import time
 
 import pyautogui
+import pyscreenshot
 from PIL import Image
 
 # TILES = {
@@ -59,22 +60,22 @@ def below(i, width, height):
 
 def top_left(i, width, height):
     top = above(i, width, height)
-    if top:
+    if top is not None:
         return left(top, width, height)
 
 def top_right(i, width, height):
     top = above(i, width, height)
-    if top:
+    if top is not None:
         return right(top, width, height)
 
 def bottom_left(i, width, height):
     bottom = below(i, width, height)
-    if bottom:
+    if bottom is not None:
         return left(bottom, width, height)
 
 def bottom_right(i, width, height):
     bottom = below(i, width, height)
-    if bottom:
+    if bottom is not None:
         return right(bottom, width, height)
 
 def get_neighbours(i, width, height):
@@ -90,36 +91,85 @@ def get_board():
     board = {i: {'location': tile, 'neighbours': get_neighbours(i, width, height), 'value': None} for i, tile in enumerate(tiles)}
     return board
 
-def read_tile_value(tile):
-    im = pyautogui.screenshot(region=tile['location'])
+def read_tile_value(screen, tile):
+    x, y, w, h = tile['location']
+    im = screen.crop((x, y, x+w, y+h))
     for value in TILES:
         if pyautogui.locate(TILES[value], im):
             tile['value'] = value
             break
 
 def read_full_board(board):
+    screen = pyautogui.screenshot()
     for tile in board:
-        print(tile)
         if board[tile]['value'] is not None:
             # Tile has already been read before
             continue
-        read_tile_value(board[tile])
+        read_tile_value(screen, board[tile])
     return board
 
-def click_tile_and_read(tile, board):
+def click_tile_and_read(tile_index, board):
+    tile = board[tile_index]
     x, y, w, h = tile['location']
     pyautogui.moveTo(x+w/2, y+h/2)
     pyautogui.click()
+    return read_full_board(board)
 
+def is_evaluable(tile_index, board):
+    tile = board[tile_index]
+    is_clicked = tile['value'] is not None
+    is_not_mine = tile['value'] is not 'mine'
+    has_unclicked_neighbour = None in [board[t]['value'] for t in tile['neighbours']]
+    return is_clicked and has_unclicked_neighbour and is_not_mine
+
+def evaluate(tile_index, board):
+    tile = board[tile_index]
+    value = tile['value']
+    unclicked = [t for t in tile['neighbours'] if board[t]['value'] is None]
+    mines = len([t for t in tile['neighbours'] if board[t]['value'] == 'mine'])
+    if value == mines:
+       for t in unclicked:
+           print(f'from {tile_index}({tile["value"]}): click {t}')
+           # input()
+           board = click_tile_and_read(t, board)
+    try:
+        if value-mines == len(unclicked):
+           for t in unclicked:
+               print(f'from {tile_index}({tile["value"]}): mine {t}')
+               # input()
+               board[t]['value'] = 'mine'
+        return board
+    except:
+        print(tile)
+        raise(RuntimeError)
+
+def print_board(board):
+    tiles = [board[t]['location'] for t in board]
+    height = sum(1 for i in tiles if i[0]==tiles[0][0])
+    width = sum(1 for i in tiles if i[1]==tiles[0][1])
+    for t in board:
+        print(t, end=' ')
+        print(board[t]['value'])
+        if t+1 % width == 0:
+            print()
+
+def print_tile(tile, board):
+    print(tile)
+    for n in tile['neighbours']:
+        print(board[n]['value'], end=' ')
 
 if __name__ == '__main__':
     board = get_board()
-    print('got_board')
+    # pick a random tile and start the game
+    tile = random.choice(list(board.keys()))
+    board = click_tile_and_read(tile, board)
     while True:
-        board = read_full_board(board)
-        print('full')
-        print(board[0])
-    # board = click_tile_and_read(board)
-    # print(board)
-
+        start_board = board
+        # generate a list of all the tiles that should be evaluated
+        evaluable = [tile for tile in board if is_evaluable(tile, board)]
+        for tile in evaluable:
+            board = evaluate(tile, board)
+        if len(evaluable) == 0: 
+            print('winner winner chicken dinner')
+            break
 
