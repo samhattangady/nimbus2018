@@ -14,13 +14,15 @@ on _minesweeperonline_.
 minesweeper board.
 3. `cd` into `path/to/nimbus2018`
 4. Run the command `python3 solve.py`
-5. Watch in awe. Cross your fingers and hope you got a solvable board.
+5. Watch in awe. Cross your fingers and hope you got a solvable board. [In case you are facing an error, you might have to replace the images directory yourself.]
 6. Think up a creative name for your high score.
 7. Exercise your bragging rights in a resposible manner.
 
 ## Notes
 
 Nimbus2018 uses `pyautogui` for reading the screen, and controlling the mouse.
+
+The bot only works on fresh boards. Partially solved boards may not work as intended
 
 PIL is used for recognising the values on screen.
 

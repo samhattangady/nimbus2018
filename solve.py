@@ -5,6 +5,8 @@ import time
 import pyautogui
 from PIL import Image
 
+from helpers import top_left, above, top_right, right, bottom_right, below, bottom_left, left 
+
 TILES = {
             None: Image.open('images/unclicked.png'),
             0: Image.open('images/zero.png'),
@@ -17,64 +19,10 @@ TILES = {
             7: Image.open('images/seven.png'),
             8: Image.open('images/eight.png')
         }
-# TILES = {
-            # None: 'images/unclicked.png',
-            # 0: 'images/zero.png',
-            # 1: 'images/one.png',
-            # 2: 'images/two.png',
-            # 3: 'images/three.png',
-            # 4: 'images/four.png',
-            # 5: 'images/five.png',
-            # 6: 'images/six.png',
-            # 7: 'images/seven.png',
-            # 8: 'images/eight.png'
-        # }
+
 
 def restart():
     pyautogui.press('f2')
-
-def game_on():
-    return bool(pyautogui.locateCenterOnScreen('images/smiley.png'))
-
-def left(i, width, height):
-    if i % width != 0:
-        # Not in col 1
-        return i-1
-
-def right(i, width, height):
-    if (i+1) % width != 0:
-        # Not in last col
-        return i+1
-
-def above(i, width, height):
-    if i-width >= 0:
-        # not top row
-        return i-width
-
-def below(i, width, height):
-    if i+width < width*height:
-        # not bottom row
-        return i+width
-
-def top_left(i, width, height):
-    top = above(i, width, height)
-    if top is not None:
-        return left(top, width, height)
-
-def top_right(i, width, height):
-    top = above(i, width, height)
-    if top is not None:
-        return right(top, width, height)
-
-def bottom_left(i, width, height):
-    bottom = below(i, width, height)
-    if bottom is not None:
-        return left(bottom, width, height)
-
-def bottom_right(i, width, height):
-    bottom = below(i, width, height)
-    if bottom is not None:
-        return right(bottom, width, height)
 
 def get_neighbours(i, width, height):
     functions = [top_left, above, top_right, right, bottom_right, below, bottom_left, left]
@@ -82,6 +30,8 @@ def get_neighbours(i, width, height):
     return [n for n in neighbours if n is not None]
 
 def get_board():
+    # works on a fresh board, where all are unclicked. First we find all
+    # the tiles, and then we arrange them in order, and find all the nieghbours
     tiles = list(pyautogui.locateAllOnScreen(TILES[None]))
     tiles = sorted(tiles, key=lambda x: (x[1], x[0]))
     height = sum(1 for i in tiles if i[0]==tiles[0][0])
@@ -91,7 +41,9 @@ def get_board():
 
 def read_tile_value(screen, tile):
     x, y, w, h = tile['location']
+    # crop the area of the screen containing the tile of interest
     im = screen.crop((x, y, x+w, y+h))
+    # compare the cropped tile to all the possible values
     for value in TILES:
         if pyautogui.locate(TILES[value], im):
             tile['value'] = value
@@ -107,16 +59,10 @@ def read_full_board(board):
     return board
 
 def click_tile_and_read(tile_index, board):
-    tile = board[tile_index]
-    x, y, w, h = tile['location']
-    pyautogui.moveTo(x+w/2, y+h/2)
-    pyautogui.click()
+    click_tile(tile_index, board)
     screen = pyautogui.screenshot()
     read_tile_value(screen, tile)
-    if tile['value'] == 0:
-        # more than one tile was uncovered
-        return read_full_board(board)
-    return board
+    return read_full_board(board)
 
 def click_tile(tile_index, board):
     tile = board[tile_index]
@@ -125,6 +71,8 @@ def click_tile(tile_index, board):
     pyautogui.click()
 
 def is_evaluable(tile_index, board):
+    # A tile is evaluable if it has a known value and it has atleast 
+    # one neighbour with an unknown value
     tile = board[tile_index]
     is_clicked = tile['value'] is not None
     is_not_mine = tile['value'] is not 'mine'
@@ -132,6 +80,12 @@ def is_evaluable(tile_index, board):
     return is_clicked and has_unclicked_neighbour and is_not_mine
 
 def evaluate(tile_index, board):
+    # To evaluate a single tile, we need its value, number of neighbouring
+    # mines, and number of unknown neighbours. If the number of mines is
+    # equal to the value, then all the unknown neighbours are not mines.
+    # If the number of unknown neighbours is equal to the difference between
+    # the value and the number of mines, then all the remaining unclicked
+    # neighbours are mines.
     tile = board[tile_index]
     value = tile['value']
     unclicked = [t for t in tile['neighbours'] if board[t]['value'] is None]
@@ -154,54 +108,39 @@ def flag_tile(tile_index, board):
     pyautogui.moveTo(x+w/2, y+h/2, 0)
     pyautogui.press('space')
 
-def print_board(board):
-    tiles = [board[t]['location'] for t in board]
-    height = sum(1 for i in tiles if i[0]==tiles[0][0])
-    width = sum(1 for i in tiles if i[1]==tiles[0][1])
-    for t in board:
-        print(t, end=' ')
-        print(board[t]['value'])
-        if t+1 % width == 0:
-            print()
-
-def print_tile(tile, board):
-    print(tile)
-    for n in tile['neighbours']:
-        print(board[n]['value'], end=' ')
-
-def sweep():
-    board = get_board()
-    # pick a random tile and start the game
-    tile = random.choice(list(board.keys()))
-    click_tile(tile, board)
-    # board = click_tile_and_read(tile, board)
-    while True:
-        # generate a list of all the tiles that should be evaluated
-        board = read_full_board(board)
-        evaluable = [tile for tile in board if is_evaluable(tile, board)]
-        for tile in evaluable:
-            board = evaluate(tile, board)
-        to_click = []
-        to_flag = []
-        for tile in board:
-            if board[tile]['action'] == 'reveal':
-                board[tile]['action'] = None
-                to_click.append(tile)
-            if board[tile]['action'] == 'flag':
-                board[tile]['action'] = None
-                to_flag.append(tile)
-        for tile in to_click:
-            click_tile(tile, board)
-        for tile in to_flag:
-            flag_tile(tile, board)
-        if len(evaluable) == 0: 
-            print('winner winner chicken dinner')
+def sweep(num_restarts=5):
+    for i in range(num_restarts):
+        # pick a random tile and start the game
+        board = get_board()
+        won = False
+        tile = random.choice(list(board.keys()))
+        click_tile(tile, board)
+        while True:
+            board = read_full_board(board)
+            # generate a list of all the tiles that should be evaluated
+            evaluable = [tile for tile in board if is_evaluable(tile, board)]
+            for tile in evaluable:
+                board = evaluate(tile, board)
+            actions = []
+            for tile in board:
+                if board[tile]['action'] == 'reveal':
+                    board[tile]['action'] = None
+                    actions.append((tile, 'reveal'))
+                if board[tile]['action'] == 'flag':
+                    board[tile]['action'] = None
+                    actions.append((tile, 'flag'))
+            for tile, action in actions:
+                if action == 'reveal':
+                    click_tile(tile, board)
+            if len(evaluable) == 0: 
+                won = True
+                break
+            if len(actions) == 0:
+                break
+        if won:
+            print('Winner Winner Chicken Dinner')
             break
-        if not to_click and not to_flag:
-            restart()
-            board = get_board()
-            tile = random.choice(list(board.keys()))
-            click_tile(tile, board)
+        restart()
 
 if __name__ == '__main__':
     sweep()
