@@ -67,8 +67,7 @@ def click_tile_and_read(tile_index, board):
 def click_tile(tile_index, board):
     tile = board[tile_index]
     x, y, w, h = tile['location']
-    pyautogui.moveTo(x+w/2, y+h/2, 0)
-    pyautogui.click()
+    pyautogui.click(x=x+w/2, y=y+h/2)
 
 def is_evaluable(tile_index, board):
     # A tile is evaluable if it has a known value and it has atleast 
@@ -132,6 +131,7 @@ def sweep(num_restarts=5):
             for tile, action in actions:
                 if action == 'reveal':
                     click_tile(tile, board)
+            # pyautogui.press('enter')
             if len(evaluable) == 0: 
                 won = True
                 break

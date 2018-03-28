@@ -1,2 +1,4 @@
 *.swp
 *.screenshot*
+__pycache__
+*/__pycache__
