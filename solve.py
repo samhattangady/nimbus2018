@@ -17,7 +17,8 @@ TILES = {
             5: Image.open('images/five.png'),
             6: Image.open('images/six.png'),
             7: Image.open('images/seven.png'),
-            8: Image.open('images/eight.png')
+            8: Image.open('images/eight.png'),
+            'mine': Image.open('images/flag.png')
         }
 
 
@@ -32,11 +33,15 @@ def get_neighbours(i, width, height):
 def get_board():
     # works on a fresh board, where all are unclicked. First we find all
     # the tiles, and then we arrange them in order, and find all the nieghbours
-    tiles = list(pyautogui.locateAllOnScreen(TILES[None]))
-    tiles = sorted(tiles, key=lambda x: (x[1], x[0]))
-    height = sum(1 for i in tiles if i[0]==tiles[0][0])
-    width = sum(1 for i in tiles if i[1]==tiles[0][1])
-    board = {i: {'location': tile, 'neighbours': get_neighbours(i, width, height), 'value': None, 'action': None} for i, tile in enumerate(tiles)}
+    raw_tiles = [[t, list(pyautogui.locateAllOnScreen(TILES[t]))] for t in TILES]
+    tiles = []
+    for value, locations in raw_tiles:
+        for location in locations:
+            tiles.append({'location': location, 'value': value})
+    tiles = sorted(tiles, key=lambda x: (x['location'][1], x['location'][0]))
+    height = sum(1 for i in tiles if i['location'][0]==tiles[0]['location'][0])
+    width = sum(1 for i in tiles if i['location'][1]==tiles[0]['location'][1])
+    board = {i: {'location': tile['location'], 'neighbours': get_neighbours(i, width, height), 'value': tile['value'], 'action': None} for i, tile in enumerate(tiles)}
     return board
 
 def read_tile_value(screen, tile):
@@ -89,16 +94,38 @@ def evaluate(tile_index, board):
     value = tile['value']
     unclicked = [t for t in tile['neighbours'] if board[t]['value'] is None]
     mines = len([t for t in tile['neighbours'] if board[t]['value'] == 'mine'])
+    # Check if all mines are accounted for, and reveal the rest
     if value == mines:
        for t in unclicked:
-           # board = click_tile_and_read(t, board)
            board[t]['action'] = 'reveal'
-           # click_tile(t, board)
-    if value-mines == len(unclicked):
+    # Check if remaining unknown area all mines
+    elif value-mines == len(unclicked):
        for t in unclicked:
-           # flag_tile(t, board)
            board[t]['action'] = 'flag'
            board[t]['value'] = 'mine'
+    # Deductive logic
+    else:
+        remaining = tile['value'] - mines
+        evaluable_neighbours = [n for n in tile['neighbours'] if is_evaluable(n, board)]
+        for neighbour in evaluable_neighbours:
+            n_tile = board[neighbour]
+            n_unclicked = [t for t in n_tile['neighbours'] if board[t]['value'] is None]
+            # we can only apply deductive logic if all the unclicked
+            # tiles of the neighbour are also common with the current
+            if len(n_unclicked) == 0 or len(set(n_unclicked).difference(set(unclicked)))!=0:
+                continue
+            n_remaining = n_tile['value'] - len([t for t in n_tile['neighbours'] if board[t]['value'] == 'mine'])
+            # Number of remaining mines after the common ones are taken into
+            # consideration
+            pair_remaining = remaining - n_remaining
+            unshared = set(unclicked).difference(set(n_unclicked))
+            if pair_remaining == 0:
+                for t in unshared:
+                    board[t]['action'] = 'reveal'
+            if pair_remaining == len(unshared):
+                for t in unshared:
+                    board[t]['action'] = 'flag'
+                    board[t]['value'] = 'mine'
     return board
 
 def flag_tile(tile_index, board):
@@ -107,13 +134,21 @@ def flag_tile(tile_index, board):
     pyautogui.moveTo(x+w/2, y+h/2, 0)
     pyautogui.press('space')
 
+def new_board(board):
+    for t in board:
+        if board[t]['value'] is not None:
+            return False
+    return True
+
 def sweep(num_restarts=5):
     for i in range(num_restarts):
         # pick a random tile and start the game
         board = get_board()
+        if new_board(board):
+            tile = random.choice(list(board.keys()))
+            click_tile(tile, board)
         won = False
-        tile = random.choice(list(board.keys()))
-        click_tile(tile, board)
+        flag = []
         while True:
             board = read_full_board(board)
             # generate a list of all the tiles that should be evaluated
@@ -131,17 +166,23 @@ def sweep(num_restarts=5):
             for tile, action in actions:
                 if action == 'reveal':
                     click_tile(tile, board)
+                if action == 'flag':
+                    flag.append(tile)
+                    # flag_tile(tile, board)
             # pyautogui.press('enter')
             if len(evaluable) == 0: 
                 won = True
                 break
             if len(actions) == 0:
+#                 for f in flag:
+#                     flag_tile(f, board)
                 break
         if won:
             print('Winner Winner Chicken Dinner')
             break
-        restart()
+        if i+1 != num_restarts:
+            restart()
 
 if __name__ == '__main__':
-    sweep()
+    sweep(1)
 
