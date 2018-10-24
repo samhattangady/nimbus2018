@@ -22,12 +22,9 @@ minesweeper board.
 
 Nimbus2018 uses `pyautogui` for reading the screen, and controlling the mouse.
 
-The bot only works on fresh boards. Partially solved boards may not work as intended
-
 PIL is used for recognising the values on screen.
 
-v1 cannot perform deduction, and is therefore only viable on beginner and
-intermediate boards.
+Nimbus can be used on partially solved boards, in case you are stuck.
 
 Specifics of the development environment. Certain things may need changing
 when using any other environment.
