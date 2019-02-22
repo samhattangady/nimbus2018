@@ -7,6 +7,8 @@ sweep mines.
 _Nimbus2018_ is a minesweeper bot written to get on the highscore list
 on _minesweeperonline_.
 
+[Nimbus2018 in action](https://www.youtube.com/watch?v=JdOu3rMDLqg)
+
 ## Running
 
 1. Open _minesweeperonline_ on Google Chrome. Change the zoom to 175%
