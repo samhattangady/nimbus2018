@@ -8,9 +8,10 @@ _Nimbus2018_ is a minesweeper bot written to get on the highscore list
 on _minesweeperonline_.
 
 ![](https://media.giphy.com/media/VhiwEIJ2erIVeyEtwz/giphy.gif)
+
 [Youtube link to video](https://www.youtube.com/watch?v=JdOu3rMDLqg)
 
-[Lightning talk about the project](https://www.youtube.com/watch?v=xDKaxTliecA)
+[My PyCon 2018 India Lightning talk about the project](https://www.youtube.com/watch?v=xDKaxTliecA)
 
 ## Running
 
