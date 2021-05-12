@@ -2,7 +2,7 @@
 
 The nimbus series of broomsticks is the fastest series of broomsticks 
 currently in production. They sweep real fast. Apparently, they even 
-sweep mines.
+sweep mines. [My PyCon 2018 India Lightning talk about the project](https://www.youtube.com/watch?v=xDKaxTliecA)
 
 _Nimbus2018_ is a minesweeper bot written to get on the highscore list
 on _minesweeperonline_.
@@ -11,7 +11,6 @@ on _minesweeperonline_.
 
 [Youtube link to video](https://www.youtube.com/watch?v=JdOu3rMDLqg)
 
-[My PyCon 2018 India Lightning talk about the project](https://www.youtube.com/watch?v=xDKaxTliecA)
 
 ## Running
 
