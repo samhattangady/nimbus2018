@@ -1,2 +1,2 @@
 PyAutoGUI==0.9.36
-Pillow==4.3.0
+Pillow==10.0.1
